@@ -54,8 +54,6 @@ options:
         out from OBS and adapted by kiwi to be build locally
 """
 import logging
-import os
-from docopt import docopt
 from kiwi.tasks.base import CliTask
 from kiwi.help import Help
 
