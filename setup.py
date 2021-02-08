@@ -20,9 +20,7 @@ config = {
     'install_requires': [
         'docopt',
         'kiwi>=9.21.21',
-        'requests',
-        'PyYAML',
-        'cerberus'
+        'requests'
     ],
     'packages': ['kiwi_obs_plugin'],
     'entry_points': {
