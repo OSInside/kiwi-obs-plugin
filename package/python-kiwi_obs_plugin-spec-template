@@ -1,0 +1,101 @@
+#
+# spec file for package kiwi_obs_plugin
+#
+# Copyright (c) 2021 SUSE Software Solutions Germany GmbH, Nuernberg, Germany.
+#
+# All modifications and additions to the file contributed by third parties
+# remain the property of their copyright owners, unless otherwise agreed
+# upon. The license for this file, and modifications and additions to the
+# file, is the same license as for the pristine package itself (unless the
+# license for the pristine package is not an Open Source License, in which
+# case the license is the MIT License). An "Open Source License" is a
+# license that conforms to the Open Source Definition (Version 1.9)
+# published by the Open Source Initiative.
+#
+# Please submit bugfixes or comments via:
+#
+#       https://github.com/OSInside/kiwi-obs-plugin/issues
+#
+
+# If they aren't provided by a system installed macro, define them
+%{!?_defaultdocdir: %global _defaultdocdir %{_datadir}/doc}
+%{!?__python3: %global __python3 /usr/bin/python3}
+
+%if %{undefined python3_sitelib}
+%global python3_sitelib %(%{__python3} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")
+%endif
+
+%if 0%{?el7}
+%global python3_pkgversion 36
+%else
+%{!?python3_pkgversion:%global python3_pkgversion 3}
+%endif
+
+%if 0%{?debian} || 0%{?ubuntu}
+%global is_deb 1
+%global pygroup python
+%global sysgroup admin
+%global develsuffix dev
+%else
+%global pygroup Development/Languages/Python
+%global sysgroup System/Management
+%global develsuffix devel
+%endif
+
+Name:           python-kiwi_obs_plugin
+Version:        %%VERSION
+Release:        0
+Url:            https://github.com/OSInside/kiwi-obs-plugin
+Summary:        KIWI - OBS Plugin
+License:        GPL-3.0-or-later
+%if "%{_vendor}" == "debbuild"
+# Needed to set Maintainer in output debs
+Packager:       Marcus Schaefer <ms@suse.de>
+%endif
+Group:          %{pygroup}
+Source:         %{name}.tar.gz
+Source1:        %{name}-rpmlintrc
+BuildRoot:      %{_tmppath}/%{name}-%{version}-build
+BuildRequires:  python%{python3_pkgversion}-%{develsuffix}
+BuildRequires:  python%{python3_pkgversion}-setuptools
+BuildRequires:  fdupes
+BuildArch:      noarch
+
+%description
+KIWI plugin to provide support to build OBS managed image
+descriptions locally
+
+# python3-kiwi_obs_plugin
+%package -n python%{python3_pkgversion}-kiwi_obs_plugin
+Summary:        KIWI - OBS Plugin
+Group:          Development/Languages/Python
+Requires:       python%{python3_pkgversion}-docopt
+Requires:       python%{python3_pkgversion}-kiwi >= 9.23.13
+Requires:       python%{python3_pkgversion}-requests
+Requires:       python%{python3_pkgversion}-setuptools
+%description -n python%{python3_pkgversion}-kiwi_obs_plugin
+KIWI plugin to provide support to build OBS managed image
+descriptions locally
+
+%prep
+%setup -q -n kiwi_obs_plugin-%{version}
+
+%build
+# Build Python 3 version
+python3 setup.py build
+
+%install
+# Install Python 3 version
+python3 setup.py install --prefix=%{_prefix} --root=%{buildroot} %{?is_deb:--install-layout=deb}
+
+# Install man pages and package documentation
+make buildroot=%{buildroot}/ docdir=%{_defaultdocdir}/ install
+
+%files -n python%{python3_pkgversion}-kiwi_obs_plugin
+%dir %{_defaultdocdir}/python-kiwi_obs_plugin
+%{python3_sitelib}/kiwi_obs_plugin*
+%{_defaultdocdir}/python-kiwi_obs_plugin/LICENSE
+%{_defaultdocdir}/python-kiwi_obs_plugin/README
+%doc %{_mandir}/man8/*
+
+%changelog
