@@ -15,8 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with kiwi-obs-plugin.  If not, see <http://www.gnu.org/licenses/>
 #
-"""
-Global version information used in kiwi-boxed-build and the package
-"""
-__version__ = '0.1.0'
-__githash__ = '$Format:%H$'
+from typing import Optional
+from getpass import getpass
+
+
+class Credentials:
+    def __init__(self):
+        self.obs_pass: Optional[str] = None
+
+    def get_obs_credentials(self, user: str) -> str:
+        if not self.obs_pass:
+            self.obs_pass = getpass(f'Enter OBS password for {user}: ')
+        return self.obs_pass

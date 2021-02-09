@@ -19,7 +19,7 @@ config = {
     'license' : 'GPLv3+',
     'install_requires': [
         'docopt',
-        'kiwi>=9.21.21',
+        'kiwi>=9.23.13',
         'requests'
     ],
     'packages': ['kiwi_obs_plugin'],
