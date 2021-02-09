@@ -107,15 +107,15 @@ class OBS:
             raise KiwiOBSPluginSourceError(
                 f'OBS source for {self.package!r} package is empty'
             )
+        Command.run(
+            ['mkdir', '-p', checkout_dir]
+        )
         source_files = []
         for entry in package_source_contents:
             source_files.append(entry.get('name'))
 
         if '_service' in source_files:
-            raise KiwiOBSPluginSourceError(
-                f'OBS source for {self.package!r} package is a source service'
-            )
-        Command.run(['mkdir', '-p', checkout_dir])
+            self._resolve_source_service(checkout_dir)
         for source_file in source_files:
             log.info(f'--> {source_file}')
             request = self._create_request(
@@ -241,3 +241,8 @@ class OBS:
         with open(download.name, 'wb') as request_info:
             request_info.write(request.content)
         return etree.parse(download.name)
+
+    @staticmethod
+    def _resolve_source_service(checkout_dir):
+        # TODO: resolve obs_scm for git
+        pass

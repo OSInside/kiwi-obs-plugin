@@ -56,9 +56,11 @@ class TestOBS:
     @patch('kiwi_obs_plugin.obs.etree')
     @patch('os.path.exists')
     @patch('kiwi_obs_plugin.obs.Command.run')
+    @patch.object(OBS, '_resolve_source_service')
     def test_fetch_obs_image(
-        self, mock_Command_run, mock_os_path_exists, mock_etree,
-        mock_NamedTemporaryFile, mock_HTTPBasicAuth, mock_requests_get
+        self, mock_resolve_source_service, mock_Command_run,
+        mock_os_path_exists, mock_etree, mock_NamedTemporaryFile,
+        mock_HTTPBasicAuth, mock_requests_get
     ):
         # check exception on existing checkout dir
         mock_os_path_exists.return_value = True
@@ -76,15 +78,16 @@ class TestOBS:
             with raises(KiwiOBSPluginSourceError):
                 self.obs.fetch_obs_image('checkout_dir')
 
-        # check Exception on source service
+        # check handling on source service
         entry = Mock()
         entry.get.return_value = '_service'
         xml_root.xpath.return_value = [entry]
         with patch('builtins.open', create=True):
-            with raises(KiwiOBSPluginSourceError):
-                self.obs.fetch_obs_image('checkout_dir')
+            self.obs.fetch_obs_image('checkout_dir')
+            mock_resolve_source_service.assert_called_once_with('checkout_dir')
 
         # check correct checkout of one source file
+        mock_Command_run.reset_mock()
         mock_requests_get.reset_mock()
         entry.get.return_value = 'some_source_file'
         with patch('builtins.open', create=True) as mock_open:
@@ -97,6 +100,10 @@ class TestOBS:
                 call(mock_NamedTemporaryFile.return_value.name, 'wb'),
                 call('checkout_dir/some_source_file', 'wb')
             ]
+
+    def test_resolve_source_service(self):
+        # TODO
+        self.obs._resolve_source_service('checkout_dir')
 
     @patch('requests.get')
     @patch('kiwi_obs_plugin.obs.HTTPBasicAuth')
