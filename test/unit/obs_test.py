@@ -56,9 +56,9 @@ class TestOBS:
     @patch('kiwi_obs_plugin.obs.etree')
     @patch('os.path.exists')
     @patch('kiwi_obs_plugin.obs.Command.run')
-    @patch.object(OBS, '_resolve_source_service')
+    @patch.object(OBS, '_resolve_git_source_service')
     def test_fetch_obs_image(
-        self, mock_resolve_source_service, mock_Command_run,
+        self, mock_resolve_git_source_service, mock_Command_run,
         mock_os_path_exists, mock_etree, mock_NamedTemporaryFile,
         mock_HTTPBasicAuth, mock_requests_get
     ):
@@ -84,7 +84,9 @@ class TestOBS:
         xml_root.xpath.return_value = [entry]
         with patch('builtins.open', create=True):
             self.obs.fetch_obs_image('checkout_dir')
-            mock_resolve_source_service.assert_called_once_with('checkout_dir')
+            mock_resolve_git_source_service.assert_called_once_with(
+                'checkout_dir'
+            )
 
         # check correct checkout of one source file
         mock_Command_run.reset_mock()
@@ -101,9 +103,46 @@ class TestOBS:
                 call('checkout_dir/some_source_file', 'wb')
             ]
 
-    def test_resolve_source_service(self):
+    def test_get_primary_multibuild_profile(self):
         # TODO
-        self.obs._resolve_source_service('checkout_dir')
+        self.obs._get_primary_multibuild_profile('checkout_dir')
+
+    @patch('kiwi_obs_plugin.obs.Command.run')
+    @patch('shutil.copy')
+    @patch('os.path.exists')
+    def test_resolve_git_source_service(
+        self, mock_os_path_exists, mock_shutil_copy, mock_Command_run
+    ):
+        mock_os_path_exists.side_effect = [
+            False, True
+        ]
+        self.obs._resolve_git_source_service('../data')
+        assert mock_Command_run.call_args_list == [
+            call(
+                [
+                    'git', 'clone', '--branch', 'master',
+                    'https://github.com/OSInside/kiwi.git',
+                    '../data/_obs_scm_git'
+                ]
+            ),
+            call(
+                [
+                    'cp', '-a',
+                    '../data/_obs_scm_git/build-tests/x86/suse/'
+                    'test-image-pxe/root', '../data'
+                ]
+            )
+        ]
+        assert mock_shutil_copy.call_args_list == [
+            call(
+                '../data/_obs_scm_git/build-tests/x86/suse/test-image-pxe/'
+                'appliance.kiwi', '../data'
+            ),
+            call(
+                '../data/_obs_scm_git/build-tests/x86/suse/test-image-pxe/'
+                'config.sh', '../data'
+            )
+        ]
 
     @patch('requests.get')
     @patch('kiwi_obs_plugin.obs.HTTPBasicAuth')

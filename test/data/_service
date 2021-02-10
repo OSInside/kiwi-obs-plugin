@@ -1,0 +1,19 @@
+<services>
+    <service name="obs_scm">
+        <param name="url">https://github.com/OSInside/kiwi.git</param>
+        <param name="scm">git</param>
+        <param name="subdir">build-tests/x86/suse/test-image-pxe</param>
+        <param name="extract">appliance.kiwi</param>
+        <param name="extract">config.sh</param>
+        <param name="exclude">root</param>
+        <param name="revision">master</param>
+    </service>
+    <service name="obs_scm">
+        <param name="url">https://github.com/OSInside/kiwi.git</param>
+        <param name="scm">git</param>
+        <param name="subdir">build-tests/x86/suse/test-image-pxe/root</param>
+        <param name="filename">root</param>
+        <param name="version">_none_</param>
+        <param name="revision">master</param>
+    </service>
+</services>

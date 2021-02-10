@@ -17,11 +17,14 @@
 #
 import os
 import logging
+import shutil
 from lxml import etree
 import requests
 from requests.auth import HTTPBasicAuth
 from tempfile import NamedTemporaryFile
-from typing import List
+from typing import (
+    List, NamedTuple
+)
 
 # project
 from kiwi.xml_state import XMLState
@@ -36,6 +39,16 @@ from kiwi_obs_plugin.exceptions import (
     KiwiOBSPluginBuildInfoError,
     KiwiOBSPluginProjectError,
     KiwiOBSPluginSourceError
+)
+
+git_source_type = NamedTuple(
+    'git_source_type', [
+        ('clone', str),
+        ('revision', str),
+        ('source_dir', str),
+        ('use_entire_source_dir', bool),
+        ('files', List[str])
+    ]
 )
 
 log = logging.getLogger('kiwi')
@@ -103,7 +116,7 @@ class OBS:
             raise KiwiOBSPluginSourceError(
                 f'OBS source checkout dir: {checkout_dir!r} already exists'
             )
-        log.info(f'--> {self.project}/{self.package}')
+        log.info(f'{self.project}/{self.package}')
         package_link = os.sep.join(
             [
                 self.api_server, 'source',
@@ -126,8 +139,6 @@ class OBS:
         for entry in package_source_contents:
             source_files.append(entry.get('name'))
 
-        if '_service' in source_files:
-            self._resolve_source_service(checkout_dir)
         for source_file in source_files:
             log.info(f'--> {source_file}')
             request = self._create_request(
@@ -135,6 +146,10 @@ class OBS:
             )
             with open(os.sep.join([checkout_dir, source_file]), 'wb') as fd:
                 fd.write(request.content)
+
+        if '_service' in source_files:
+            self._resolve_git_source_service(checkout_dir)
+
         return checkout_dir
 
     def add_obs_repositories(self, xml_state: XMLState) -> None:
@@ -255,6 +270,77 @@ class OBS:
         return etree.parse(download.name)
 
     @staticmethod
-    def _resolve_source_service(checkout_dir):
-        # TODO: resolve obs_scm for git
+    def _resolve_git_source_service(checkout_dir):
+        log.info('Looking up git source service...')
+        git_sources: List[git_source_type] = []
+        service_xml = etree.parse(
+            os.sep.join([checkout_dir, '_service'])
+        )
+        scm_services = service_xml.getroot().xpath(
+            '/services/service[@name="obs_scm"]'
+        )
+        for scm_service in scm_services:
+            source_files: List[str] = []
+            (source_ok, source_url, source_dir, source_branch, full_source) = (
+                False, None, '', 'master', False
+            )
+            for param in scm_service:
+                scm_type = param.get('name')
+                if scm_type == 'scm':
+                    source_ok = True if param.text == 'git' else False
+                if scm_type == 'url':
+                    source_url = param.text
+                if scm_type == 'subdir':
+                    source_dir = param.text
+                if scm_type == 'revision':
+                    source_branch = param.text
+                if scm_type == 'extract':
+                    source_files.append(param.text)
+                if scm_type == 'filename':
+                    full_source = True
+            if source_ok and source_url:
+                git_sources.append(
+                    git_source_type(
+                        clone=source_url,
+                        revision=source_branch,
+                        source_dir=source_dir,
+                        files=source_files,
+                        use_entire_source_dir=full_source
+                    )
+                )
+        for git_source in git_sources:
+            git_checkout_dir = os.sep.join([checkout_dir, '_obs_scm_git'])
+            if not os.path.exists(git_checkout_dir):
+                log.info(f'Cloning git: {git_source.clone!r}')
+                Command.run(
+                    [
+                        'git', 'clone', '--branch', git_source.revision,
+                        git_source.clone, git_checkout_dir
+                    ]
+                )
+            if git_source.files or git_source.use_entire_source_dir:
+                log.info(f'Fetching from {git_source.source_dir!r}')
+                for source_file in git_source.files:
+                    log.info(f'--> {source_file!r}')
+                    shutil.copy(
+                        os.sep.join(
+                            [
+                                git_checkout_dir, git_source.source_dir,
+                                source_file
+                            ]
+                        ), checkout_dir
+                    )
+                if git_source.use_entire_source_dir:
+                    log.info('--> Copy of directory')
+                    Command.run(
+                        [
+                            'cp', '-a', os.sep.join(
+                                [git_checkout_dir, git_source.source_dir]
+                            ), checkout_dir
+                        ]
+                    )
+
+    @staticmethod
+    def _get_primary_multibuild_profile(checkout_dir):
+        # TODO: resolve _multibuild
         pass
