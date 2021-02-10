@@ -18,9 +18,10 @@
 """
 usage: kiwi-ng image obs -h | --help
        kiwi-ng image obs --image=<path> --user=<name> --target-dir=<directory>
+           [--force]
+           [--ssl-no-verify]
            [--arch=<arch>]
            [--repo=<repo>]
-           [--ssl-no-verify]
        kiwi-ng image obs help
 
 
@@ -30,33 +31,38 @@ commands:
         for local build capabilities
 
 options:
+    --arch=<arch>
+        Optional architecture reference for the specifified image
+        image. This defaults to x86_64
+
+    --force
+        Allow to override existing content from --target-dir
+
     --image=<project_package_path>
         Image location for an image description in the Open Build Service.
         The specification consists out of the project and package name
         specified like a storage path, e.g `OBS:project:name/package`
 
-    --user=<name>
-        Open Build Service account user name. KIWI will ask for the
-        user credentials which blocks stdin until entered
-
-    --arch=<arch>
-        Optional architecture reference for the specifified image
-        image. This defaults to x86_64
-
     --repo=<repo>
         Optional repository name. This defaults to: image
 
-    --obs-ssl-no-verify
+    --ssl-no-verify
         Do not verify SSL server certificate when connecting to OBS
 
     --target-dir=<directory>
         the target directory to store the image description checked
         out from OBS and adapted by kiwi to be build locally
+
+    --user=<name>
+        Open Build Service account user name. KIWI will ask for the
+        user credentials which blocks stdin until entered
 """
 import logging
 from kiwi.tasks.base import CliTask
 from kiwi.help import Help
 
+from kiwi_obs_plugin.obs import OBS
+from kiwi_obs_plugin.credentials import Credentials
 
 log = logging.getLogger('kiwi')
 
@@ -64,5 +70,27 @@ log = logging.getLogger('kiwi')
 class ImageObsTask(CliTask):
     def process(self):
         self.manual = Help()
-        if self.command_args.get('help') is True:
+        if self.command_args.get('help'):
             return self.manual.show('kiwi::image::obs')
+
+        if self.command_args.get('--image'):
+            self.credentials = Credentials()
+            ssl_verify = bool(
+                self.command_args['--ssl-no-verify']
+            )
+            self.obs = OBS(
+                self.command_args['--image'],
+                self.command_args['--user'],
+                self.credentials.get_obs_credentials(
+                    self.command_args['--user']
+                ),
+                ssl_verify,
+                self.global_args['--profile'],
+                self.command_args['--arch'],
+                self.command_args['--repo']
+            )
+            kiwi_description_dir = self.obs.fetch_obs_image(
+                self.command_args['--target-dir'],
+                self.command_args['--force']
+            )
+            log.info(kiwi_description_dir)

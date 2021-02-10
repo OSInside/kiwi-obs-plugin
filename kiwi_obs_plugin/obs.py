@@ -69,25 +69,37 @@ class OBS:
                 f'Invalid image path: {image_path}'
             )
         self.user = user
+
+        # TODO: fetch this information from _multibuild
+        # to resolve obsrepositories just one profile name from multibuild
+        # is enough as it will always be the same set of repos from the
+        # prj information. But to fetch _buildinfo one profile name is
+        # needed and that info can be taken as simply the first entry
+        # from multibuild
         self.profile = profiles[0] if profiles else None
+
         self.password = password
         self.ssl_verify = ssl_verify or True
         self.arch = arch or 'x86_64'
         self.repo = repo or 'images'
         self.api_server = runtime_config.get_obs_api_server_url()
 
-    def fetch_obs_image(self, checkout_dir) -> str:
+    def fetch_obs_image(self, checkout_dir: str, force: bool = False) -> str:
         """
         Fetch image description from the obs project
 
-        :return: temp local path to image description
+        :param str checkout_dir:
+            directory to use for checkout, the directory will be
+            created if it does not exist
+        :param bool force:
+            allow to override existing checkout_dir content
 
-        :return: path to local image checkout
+        :return: checkout_dir
 
         :rtype: str
         """
         log.info('Checking out OBS project:')
-        if os.path.exists(checkout_dir):
+        if os.path.exists(checkout_dir) and not force:
             raise KiwiOBSPluginSourceError(
                 f'OBS source checkout dir: {checkout_dir!r} already exists'
             )

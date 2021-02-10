@@ -26,10 +26,11 @@ class TestImageObsTask:
         self.task.command_args['--arch'] = None
         self.task.command_args['--repo'] = False
         self.task.command_args['--ssl-no-verify'] = None
+        self.task.command_args['--force'] = False
         self.task.command_args['--target-dir'] = '../data/target_dir'
 
     @patch('kiwi_obs_plugin.tasks.image_obs.Help')
-    def test_process_system_boxbuild_help(self, mock_kiwi_Help):
+    def test_process_image_obs_help(self, mock_kiwi_Help):
         Help = Mock()
         mock_kiwi_Help.return_value = Help
         self._init_command_args()
@@ -38,4 +39,27 @@ class TestImageObsTask:
         self.task.process()
         Help.show.assert_called_once_with(
             'kiwi::image::obs'
+        )
+
+    @patch('kiwi_obs_plugin.tasks.image_obs.Credentials')
+    @patch('kiwi_obs_plugin.tasks.image_obs.OBS')
+    def test_process_image_obs_image(self, mock_OBS, mock_Credentials):
+        obs = Mock()
+        mock_OBS.return_value = obs
+        credentials = Mock()
+        mock_Credentials.return_value = credentials
+        self._init_command_args()
+        self.task.command_args['--image'] = 'project/image'
+        self.task.process()
+        mock_OBS.assert_called_once_with(
+            'project/image',
+            'obs_user',
+            credentials.get_obs_credentials.return_value,
+            False,
+            ['foo'],
+            None,
+            False
+        )
+        obs.fetch_obs_image.assert_called_once_with(
+            '../data/target_dir', False
         )

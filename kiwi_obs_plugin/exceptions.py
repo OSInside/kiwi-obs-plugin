@@ -1,4 +1,4 @@
-# Copyright (c) 2020 SUSE Software Solutions Germany GmbH.  All rights reserved.
+# Copyright (c) 2021 SUSE Software Solutions Germany GmbH.  All rights reserved.
 #
 # This file is part of kiwi-obs-plugin.
 #
@@ -13,7 +13,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kiwi-boxed-build.  If not, see <http://www.gnu.org/licenses/>
+# along with kiwi-obs-plugin.  If not, see <http://www.gnu.org/licenses/>
 #
 from kiwi.exceptions import KiwiError
 

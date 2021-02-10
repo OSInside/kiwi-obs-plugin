@@ -16,7 +16,7 @@
 # along with kiwi-obs-plugin.  If not, see <http://www.gnu.org/licenses/>
 #
 """
-Global version information used in kiwi-boxed-build and the package
+Global version information used in kiwi-obs-plugin and the package
 """
 __version__ = '0.1.0'
 __githash__ = '$Format:%H$'
