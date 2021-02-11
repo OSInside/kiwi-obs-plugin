@@ -23,7 +23,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 from tempfile import NamedTemporaryFile
 from typing import (
-    List, NamedTuple
+    List, NamedTuple, Optional
 )
 
 # project
@@ -60,7 +60,7 @@ class OBS:
     """
     def __init__(
         self, image_path: str, user: str, password: str,
-        ssl_verify: bool, profiles: List[str], arch: str, repo: str
+        ssl_verify: bool, arch: Optional[str], repo: Optional[str]
     ):
         """
         Initialize OBS API access for a given project and package
@@ -82,20 +82,12 @@ class OBS:
                 f'Invalid image path: {image_path}'
             )
         self.user = user
-
-        # TODO: fetch this information from _multibuild
-        # to resolve obsrepositories just one profile name from multibuild
-        # is enough as it will always be the same set of repos from the
-        # prj information. But to fetch _buildinfo one profile name is
-        # needed and that info can be taken as simply the first entry
-        # from multibuild
-        self.profile = profiles[0] if profiles else None
-
         self.password = password
         self.ssl_verify = ssl_verify or True
         self.arch = arch or 'x86_64'
         self.repo = repo or 'images'
         self.api_server = runtime_config.get_obs_api_server_url()
+        self.multibuild_profile = None
 
     def fetch_obs_image(self, checkout_dir: str, force: bool = False) -> str:
         """
@@ -150,6 +142,10 @@ class OBS:
         if '_service' in source_files:
             self._resolve_git_source_service(checkout_dir)
 
+        if '_multibuild' in source_files:
+            self.multibuild_profile = self._get_primary_multibuild_profile(
+                checkout_dir
+            )
         return checkout_dir
 
     def add_obs_repositories(self, xml_state: XMLState) -> None:
@@ -164,8 +160,8 @@ class OBS:
             # project configuration
             return None
 
-        package_name = self.package if not self.profile \
-            else f'{self.package}:{self.profile}'
+        package_name = self.package if not self.multibuild_profile \
+            else f'{self.package}:{self.multibuild_profile}'
         log.info(f'Using OBS repositories from {self.project}/{package_name}')
         buildinfo_link = os.sep.join(
             [
@@ -342,5 +338,17 @@ class OBS:
 
     @staticmethod
     def _get_primary_multibuild_profile(checkout_dir):
-        # TODO: resolve _multibuild
-        pass
+        log.info('Reading multibuild profile(s)...')
+        multibuild_profile = None
+        multibuild_xml = etree.parse(
+            os.sep.join([checkout_dir, '_multibuild'])
+        )
+        multibuild_profile_list = multibuild_xml.getroot().xpath(
+            '/multibuild/flavor'
+        )
+        if multibuild_profile_list:
+            multibuild_profile = multibuild_profile_list[0].text
+            log.info(
+                f'--> Using profile {multibuild_profile!r}'
+            )
+        return multibuild_profile

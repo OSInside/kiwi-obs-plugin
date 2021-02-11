@@ -32,13 +32,13 @@ class TestOBS:
         mock_RuntimeConfig.return_value = runtime_config
         self.obs = OBS(
             'Virtualization:Appliances:SelfContained:suse/box',
-            'bob', 'secret', None, ['Kernel'], None, None
+            'bob', 'secret', False, None, None
         )
 
     @patch('kiwi_obs_plugin.obs.RuntimeConfig')
     def test_init_raises_invalid_project_path(self, mock_RuntimeConfig):
         with raises(KiwiOBSPluginProjectError):
-            self.obs = OBS('OBS:Project', 'user', 'pwd', True, None, None, None)
+            OBS('OBS:Project', 'user', 'pwd', True, None, None)
 
     @patch.object(OBS, '_delete_obsrepositories_placeholder_repo')
     @patch.object(OBS, '_create_request')
@@ -57,8 +57,10 @@ class TestOBS:
     @patch('os.path.exists')
     @patch('kiwi_obs_plugin.obs.Command.run')
     @patch.object(OBS, '_resolve_git_source_service')
+    @patch.object(OBS, '_get_primary_multibuild_profile')
     def test_fetch_obs_image(
-        self, mock_resolve_git_source_service, mock_Command_run,
+        self, mock_get_primary_multibuild_profile,
+        mock_resolve_git_source_service, mock_Command_run,
         mock_os_path_exists, mock_etree, mock_NamedTemporaryFile,
         mock_HTTPBasicAuth, mock_requests_get
     ):
@@ -79,19 +81,26 @@ class TestOBS:
                 self.obs.fetch_obs_image('checkout_dir')
 
         # check handling on source service
-        entry = Mock()
-        entry.get.return_value = '_service'
-        xml_root.xpath.return_value = [entry]
+        service = Mock()
+        service.get.return_value = '_service'
+        multibuild = Mock()
+        multibuild.get.return_value = '_multibuild'
+        xml_root.xpath.return_value = [service, multibuild]
         with patch('builtins.open', create=True):
             self.obs.fetch_obs_image('checkout_dir')
             mock_resolve_git_source_service.assert_called_once_with(
+                'checkout_dir'
+            )
+            mock_get_primary_multibuild_profile.assert_called_once_with(
                 'checkout_dir'
             )
 
         # check correct checkout of one source file
         mock_Command_run.reset_mock()
         mock_requests_get.reset_mock()
+        entry = Mock()
         entry.get.return_value = 'some_source_file'
+        xml_root.xpath.return_value = [entry]
         with patch('builtins.open', create=True) as mock_open:
             mock_open.return_value = MagicMock(spec=io.IOBase)
             self.obs.fetch_obs_image('checkout_dir')
@@ -102,10 +111,6 @@ class TestOBS:
                 call(mock_NamedTemporaryFile.return_value.name, 'wb'),
                 call('checkout_dir/some_source_file', 'wb')
             ]
-
-    def test_get_primary_multibuild_profile(self):
-        # TODO
-        self.obs._get_primary_multibuild_profile('checkout_dir')
 
     @patch('kiwi_obs_plugin.obs.Command.run')
     @patch('shutil.copy')
@@ -143,6 +148,11 @@ class TestOBS:
                 'config.sh', '../data'
             )
         ]
+
+    def test_get_primary_multibuild_profile(self):
+        assert self.obs._get_primary_multibuild_profile(
+            '../data'
+        ) == 'Kernel'
 
     @patch('requests.get')
     @patch('kiwi_obs_plugin.obs.HTTPBasicAuth')
@@ -224,7 +234,7 @@ class TestOBS:
                 call(
                     'https://api.opensuse.org/build/Virtualization:'
                     'Appliances:SelfContained:suse/images/x86_64/'
-                    'box:Kernel/_buildinfo',
+                    'box/_buildinfo',
                     auth=mock_HTTPBasicAuth.return_value,
                     verify=True
                 ),

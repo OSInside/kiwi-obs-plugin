@@ -10,7 +10,6 @@ class TestImageObsTask:
     def setup(self):
         sys.argv = [
             sys.argv[0],
-            '--profile', 'foo',
             'image', 'obs',
             '--image', 'openSUSE:Leap:15.2:Images/livecd-openSUSE',
             '--user', 'obs_user',
@@ -56,7 +55,6 @@ class TestImageObsTask:
             'obs_user',
             credentials.get_obs_credentials.return_value,
             False,
-            ['foo'],
             None,
             False
         )

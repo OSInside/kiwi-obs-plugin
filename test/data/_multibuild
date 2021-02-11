@@ -1,0 +1,4 @@
+<multibuild>
+    <flavor>Kernel</flavor>
+    <flavor>System</flavor>
+</multibuild>

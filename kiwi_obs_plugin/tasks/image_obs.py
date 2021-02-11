@@ -85,7 +85,6 @@ class ImageObsTask(CliTask):
                     self.command_args['--user']
                 ),
                 ssl_verify,
-                self.global_args['--profile'],
                 self.command_args['--arch'],
                 self.command_args['--repo']
             )
