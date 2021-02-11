@@ -68,7 +68,7 @@ log = logging.getLogger('kiwi')
 
 
 class ImageObsTask(CliTask):
-    def process(self):
+    def process(self) -> None:
         self.manual = Help()
         if self.command_args.get('help'):
             return self.manual.show('kiwi::image::obs')

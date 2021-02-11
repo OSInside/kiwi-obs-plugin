@@ -39,3 +39,6 @@ sphinx_rtd_theme
 
 # for release
 twine
+
+# static type checking
+mypy
