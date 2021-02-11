@@ -4,6 +4,7 @@ from mock import (
     Mock, patch
 )
 from kiwi_obs_plugin.tasks.image_obs import ImageObsTask
+from kiwi_obs_plugin.obs import obs_checkout_type
 
 
 class TestImageObsTask:
@@ -42,8 +43,15 @@ class TestImageObsTask:
 
     @patch('kiwi_obs_plugin.tasks.image_obs.Credentials')
     @patch('kiwi_obs_plugin.tasks.image_obs.OBS')
-    def test_process_image_obs_image(self, mock_OBS, mock_Credentials):
+    @patch('shutil.copy')
+    def test_process_image_obs_image(
+        self, mock_shutil_copy, mock_OBS, mock_Credentials
+    ):
         obs = Mock()
+        obs.fetch_obs_image.return_value = obs_checkout_type(
+            checkout_dir='../data',
+            profile='Kernel'
+        )
         mock_OBS.return_value = obs
         credentials = Mock()
         mock_Credentials.return_value = credentials
@@ -61,3 +69,7 @@ class TestImageObsTask:
         obs.fetch_obs_image.assert_called_once_with(
             '../data/target_dir', False
         )
+        obs.add_obs_repositories.assert_called_once_with(
+            self.task.xml_state
+        )
+        mock_shutil_copy.assert_called_once()

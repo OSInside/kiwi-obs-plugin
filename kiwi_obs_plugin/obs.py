@@ -51,6 +51,13 @@ git_source_type = NamedTuple(
     ]
 )
 
+obs_checkout_type = NamedTuple(
+    'obs_checkout_type', [
+        ('checkout_dir', str),
+        ('profile', Optional[str])
+    ]
+)
+
 log = logging.getLogger('kiwi')
 
 
@@ -87,9 +94,10 @@ class OBS:
         self.arch = arch or 'x86_64'
         self.repo = repo or 'images'
         self.api_server = runtime_config.get_obs_api_server_url()
-        self.multibuild_profile = None
 
-    def fetch_obs_image(self, checkout_dir: str, force: bool = False) -> str:
+    def fetch_obs_image(
+        self, checkout_dir: str, force: bool = False
+    ) -> obs_checkout_type:
         """
         Fetch image description from the obs project
 
@@ -104,6 +112,7 @@ class OBS:
         :rtype: str
         """
         log.info('Checking out OBS project:')
+        primary_multibuild_profile = None
         if os.path.exists(checkout_dir) and not force:
             raise KiwiOBSPluginSourceError(
                 f'OBS source checkout dir: {checkout_dir!r} already exists'
@@ -143,12 +152,17 @@ class OBS:
             self._resolve_git_source_service(checkout_dir)
 
         if '_multibuild' in source_files:
-            self.multibuild_profile = self._get_primary_multibuild_profile(
+            primary_multibuild_profile = self._get_primary_multibuild_profile(
                 checkout_dir
             )
-        return checkout_dir
+        return obs_checkout_type(
+            checkout_dir=checkout_dir,
+            profile=primary_multibuild_profile
+        )
 
-    def add_obs_repositories(self, xml_state: XMLState) -> None:
+    def add_obs_repositories(
+        self, xml_state: XMLState, profile: Optional[str] = None
+    ) -> None:
         """
         Add repositories from the obs project to the provided XMLState
 
@@ -160,8 +174,8 @@ class OBS:
             # project configuration
             return None
 
-        package_name = self.package if not self.multibuild_profile \
-            else f'{self.package}:{self.multibuild_profile}'
+        package_name = self.package if not profile \
+            else f'{self.package}:{profile}'
         log.info(f'Using OBS repositories from {self.project}/{package_name}')
         buildinfo_link = os.sep.join(
             [
