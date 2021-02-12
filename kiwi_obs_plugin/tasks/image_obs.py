@@ -58,7 +58,6 @@ options:
         user credentials which blocks stdin until entered
 """
 import logging
-import shutil
 from kiwi.tasks.base import CliTask
 from kiwi.help import Help
 
@@ -98,8 +97,11 @@ class ImageObsTask(CliTask):
             self.load_xml_description(
                 obs_checkout.checkout_dir
             )
-            self.obs.add_obs_repositories(self.xml_state)
-            shutil.copy(
-                self.description.markup.get_xml_description(),
-                self.config_file
+            self.obs.add_obs_repositories(
+                self.xml_state, obs_checkout.profile
             )
+            self.obs.write_kiwi_config_from_state(
+                self.xml_state, self.config_file
+            )
+            log.info('OBS project checked out at:')
+            log.info(f'--> {obs_checkout.checkout_dir}')

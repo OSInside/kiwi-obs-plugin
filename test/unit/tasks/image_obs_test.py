@@ -70,6 +70,8 @@ class TestImageObsTask:
             '../data/target_dir', False
         )
         obs.add_obs_repositories.assert_called_once_with(
-            self.task.xml_state
+            self.task.xml_state, 'Kernel'
         )
-        mock_shutil_copy.assert_called_once()
+        obs.write_kiwi_config_from_state.assert_called_once_with(
+            self.task.xml_state, '../data/appliance.kiwi'
+        )

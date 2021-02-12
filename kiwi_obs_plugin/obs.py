@@ -235,18 +235,16 @@ class OBS:
                     repo_url, repo_type, repo_alias, f'{repo_prio}'
                 )
 
-    def _create_request(self, url):
-        try:
-            request = requests.get(
-                url, auth=HTTPBasicAuth(self.user, self.password),
-                verify=self.ssl_verify
+    @staticmethod
+    def write_kiwi_config_from_state(
+        xml_state: XMLState, config_file: str
+    ) -> None:
+        with open(config_file, 'w', encoding='utf-8') as config:
+            config.write('<?xml version="1.0" encoding="utf-8"?>')
+            config.write(os.linesep)
+            xml_state.xml_data.export(
+                outfile=config, level=0
             )
-            request.raise_for_status()
-        except Exception as issue:
-            raise KiwiUriOpenError(
-                f'{type(issue).__name__}: {issue}'
-            )
-        return request
 
     @staticmethod
     def _delete_obsrepositories_placeholder_repo(xml_state):
@@ -366,3 +364,16 @@ class OBS:
                 f'--> Using profile {multibuild_profile!r}'
             )
         return multibuild_profile
+
+    def _create_request(self, url):
+        try:
+            request = requests.get(
+                url, auth=HTTPBasicAuth(self.user, self.password),
+                verify=self.ssl_verify
+            )
+            request.raise_for_status()
+        except Exception as issue:
+            raise KiwiUriOpenError(
+                f'{type(issue).__name__}: {issue}'
+            )
+        return request

@@ -1,4 +1,5 @@
 import io
+import os
 from mock import (
     patch, Mock, MagicMock, call
 )
@@ -153,6 +154,25 @@ class TestOBS:
         assert self.obs._get_primary_multibuild_profile(
             '../data'
         ) == 'Kernel'
+
+    def test_write_kiwi_config_from_state(self):
+        xml_state = Mock()
+        with patch('builtins.open', create=True) as mock_open:
+            mock_open.return_value = MagicMock(spec=io.IOBase)
+            file_handle = mock_open.return_value.__enter__.return_value
+            self.obs.write_kiwi_config_from_state(
+                xml_state, 'config_file'
+            )
+            mock_open.assert_called_once_with(
+                'config_file', 'w', encoding='utf-8'
+            )
+            assert file_handle.write.call_args_list == [
+                call('<?xml version="1.0" encoding="utf-8"?>'),
+                call(os.linesep)
+            ]
+            xml_state.xml_data.export.assert_called_once_with(
+                outfile=file_handle, level=0
+            )
 
     @patch('requests.get')
     @patch('kiwi_obs_plugin.obs.HTTPBasicAuth')
