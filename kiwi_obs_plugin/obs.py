@@ -35,10 +35,13 @@ from kiwi.command import Command
 
 from kiwi.exceptions import KiwiUriOpenError
 
+from kiwi_obs_plugin.credentials import Credentials
+
 from kiwi_obs_plugin.exceptions import (
     KiwiOBSPluginBuildInfoError,
     KiwiOBSPluginProjectError,
-    KiwiOBSPluginSourceError
+    KiwiOBSPluginSourceError,
+    KiwiOBSPluginCredentialsError
 )
 
 git_source_type = NamedTuple(
@@ -66,8 +69,8 @@ class OBS:
     **Implements methods to access the Open Build Service API**
     """
     def __init__(
-        self, image_path: str, user: str, password: str,
-        ssl_verify: bool, arch: Optional[str], repo: Optional[str]
+        self, image_path: str, ssl_verify: bool = True,
+        user: Optional[str] = None, password: Optional[str] = None
     ):
         """
         Initialize OBS API access for a given project and package
@@ -75,11 +78,6 @@ class OBS:
         :param str image_path: OBS project/package path
         :param str user: OBS account user name
         :param str password: OBS account password
-        :param list profiles: OBS image multibuild profile list
-        :param str arch: OBS architecture
-        :param str repo: OBS image package build repository name
-        :param str api_server:
-            OBS api server to use, defaults to https://api.opensuse.org/build
         """
         runtime_config = RuntimeConfig()
         try:
@@ -88,12 +86,29 @@ class OBS:
             raise KiwiOBSPluginProjectError(
                 f'Invalid image path: {image_path}'
             )
+        if not password:
+            for credentials in runtime_config.get_obs_api_credentials() or []:
+                if not user:
+                    # Use first user/credentials from config
+                    (user, password) = list(credentials.items())[0]
+                    break
+                elif user in credentials:
+                    # Use credentials for given user
+                    password = credentials.get(user)
+                    break
+        if not user:
+            raise KiwiOBSPluginCredentialsError(
+                'No username to access the Open Build Service provided'
+            )
+        if not password:
+            credentials_interactive = Credentials()
+            password = credentials_interactive.get_obs_credentials(
+                user
+            )
         self.user = user
         self.password = password
-        self.ssl_verify = ssl_verify or True
-        self.arch = arch or 'x86_64'
-        self.repo = repo or 'images'
         self.api_server = runtime_config.get_obs_api_server_url()
+        self.ssl_verify = ssl_verify or True
 
     def fetch_obs_image(
         self, checkout_dir: str, force: bool = False
@@ -161,12 +176,16 @@ class OBS:
         )
 
     def add_obs_repositories(
-        self, xml_state: XMLState, profile: Optional[str] = None
+        self, xml_state: XMLState, profile: Optional[str] = None,
+        arch: str = 'x86_64', repo: str = 'images'
     ) -> None:
         """
         Add repositories from the obs project to the provided XMLState
 
         :param XMLState xml_state: XMLState object reference
+        :param str arch: OBS architecture, defaults to: 'x86_64'
+        :param str repo:
+            OBS image package build repository name, defaults to: 'images'
         """
         if not OBS._delete_obsrepositories_placeholder_repo(xml_state):
             # The repo list does not contain the obsrepositories flag
@@ -179,8 +198,7 @@ class OBS:
         log.info(f'Using OBS repositories from {self.project}/{package_name}')
         buildinfo_link = os.sep.join(
             [
-                self.api_server, 'build',
-                self.project, self.repo, self.arch,
+                self.api_server, 'build', self.project, repo, arch,
                 package_name, '_buildinfo'
             ]
         )

@@ -14,7 +14,8 @@ from kiwi.exceptions import KiwiUriOpenError
 from kiwi_obs_plugin.exceptions import (
     KiwiOBSPluginBuildInfoError,
     KiwiOBSPluginProjectError,
-    KiwiOBSPluginSourceError
+    KiwiOBSPluginSourceError,
+    KiwiOBSPluginCredentialsError
 )
 
 from kiwi_obs_plugin.obs import OBS
@@ -33,13 +34,45 @@ class TestOBS:
         mock_RuntimeConfig.return_value = runtime_config
         self.obs = OBS(
             'Virtualization:Appliances:SelfContained:suse/box',
-            'bob', 'secret', False, None, None
+            False, 'bob', 'secret'
         )
 
     @patch('kiwi_obs_plugin.obs.RuntimeConfig')
     def test_init_raises_invalid_project_path(self, mock_RuntimeConfig):
         with raises(KiwiOBSPluginProjectError):
-            OBS('OBS:Project', 'user', 'pwd', True, None, None)
+            OBS('OBS:Project', True, 'user', 'pwd')
+
+    @patch('kiwi_obs_plugin.obs.RuntimeConfig')
+    def test_init_raises_credentials_setup(self, mock_RuntimeConfig):
+        with raises(KiwiOBSPluginCredentialsError):
+            OBS('OBS:Project/package')
+
+    @patch('kiwi_obs_plugin.obs.RuntimeConfig')
+    @patch('kiwi_obs_plugin.obs.Credentials')
+    def test_init_interactive_credentials_setup(
+        self, mock_Credentials, mock_RuntimeConfig
+    ):
+        credentials = Mock()
+        mock_Credentials.return_value = credentials
+        OBS('OBS:Project/package', True, 'bob')
+        credentials.get_obs_credentials.assert_called_once_with('bob')
+
+    @patch('kiwi_obs_plugin.obs.RuntimeConfig')
+    @patch('kiwi_obs_plugin.obs.Credentials')
+    def test_init_credentials_from_runtime_config_setup(
+        self, mock_Credentials, mock_RuntimeConfig
+    ):
+        runtime_config = Mock()
+        runtime_config.get_obs_api_credentials.return_value = [
+            {'bob': 'secret'}
+        ]
+        mock_RuntimeConfig.return_value = runtime_config
+        obs_with_user = OBS('OBS:Project/package', True, 'bob')
+        assert obs_with_user.password == 'secret'
+        assert obs_with_user.user == 'bob'
+        obs_no_user = OBS('OBS:Project/package')
+        assert obs_no_user.password == 'secret'
+        assert obs_no_user.user == 'bob'
 
     @patch.object(OBS, '_delete_obsrepositories_placeholder_repo')
     @patch.object(OBS, '_create_request')

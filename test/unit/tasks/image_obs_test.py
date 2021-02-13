@@ -41,36 +41,26 @@ class TestImageObsTask:
             'kiwi::image::obs'
         )
 
-    @patch('kiwi_obs_plugin.tasks.image_obs.Credentials')
     @patch('kiwi_obs_plugin.tasks.image_obs.OBS')
     @patch('shutil.copy')
-    def test_process_image_obs_image(
-        self, mock_shutil_copy, mock_OBS, mock_Credentials
-    ):
+    def test_process_image_obs_image(self, mock_shutil_copy, mock_OBS):
         obs = Mock()
         obs.fetch_obs_image.return_value = obs_checkout_type(
             checkout_dir='../data',
             profile='Kernel'
         )
         mock_OBS.return_value = obs
-        credentials = Mock()
-        mock_Credentials.return_value = credentials
         self._init_command_args()
         self.task.command_args['--image'] = 'project/image'
         self.task.process()
         mock_OBS.assert_called_once_with(
-            'project/image',
-            'obs_user',
-            credentials.get_obs_credentials.return_value,
-            False,
-            None,
-            False
+            'project/image', False, 'obs_user'
         )
         obs.fetch_obs_image.assert_called_once_with(
             '../data/target_dir', False
         )
         obs.add_obs_repositories.assert_called_once_with(
-            self.task.xml_state, 'Kernel'
+            self.task.xml_state, 'Kernel', 'x86_64', 'images'
         )
         obs.write_kiwi_config_from_state.assert_called_once_with(
             self.task.xml_state, '../data/appliance.kiwi'

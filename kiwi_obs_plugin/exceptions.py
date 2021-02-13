@@ -38,3 +38,9 @@ class KiwiOBSPluginSourceError(KiwiError):
     Exception raised if the OBS image sources cannot be used
     for building the image
     """
+
+
+class KiwiOBSPluginCredentialsError(KiwiError):
+    """
+    Exception raised if the the OBS credentials setup failed
+    """

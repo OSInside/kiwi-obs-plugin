@@ -17,8 +17,9 @@
 #
 """
 usage: kiwi-ng image obs -h | --help
-       kiwi-ng image obs --image=<path> --user=<name> --target-dir=<directory>
+       kiwi-ng image obs --image=<path> --target-dir=<directory>
            [--force]
+           [--user=<name>]
            [--ssl-no-verify]
            [--arch=<arch>]
            [--repo=<repo>]
@@ -62,7 +63,6 @@ from kiwi.tasks.base import CliTask
 from kiwi.help import Help
 
 from kiwi_obs_plugin.obs import OBS
-from kiwi_obs_plugin.credentials import Credentials
 
 log = logging.getLogger('kiwi')
 
@@ -74,19 +74,12 @@ class ImageObsTask(CliTask):
             return self.manual.show('kiwi::image::obs')
 
         if self.command_args.get('--image'):
-            self.credentials = Credentials()
             ssl_verify = bool(
                 self.command_args['--ssl-no-verify']
             )
             self.obs = OBS(
-                self.command_args['--image'],
-                self.command_args['--user'],
-                self.credentials.get_obs_credentials(
-                    self.command_args['--user']
-                ),
-                ssl_verify,
-                self.command_args['--arch'],
-                self.command_args['--repo']
+                self.command_args['--image'], ssl_verify,
+                self.command_args['--user']
             )
             obs_checkout = self.obs.fetch_obs_image(
                 self.command_args['--target-dir'],
@@ -98,7 +91,9 @@ class ImageObsTask(CliTask):
                 obs_checkout.checkout_dir
             )
             self.obs.add_obs_repositories(
-                self.xml_state, obs_checkout.profile
+                self.xml_state, obs_checkout.profile,
+                self.command_args['--arch'] or 'x86_64',
+                self.command_args['--repo'] or 'images'
             )
             self.obs.write_kiwi_config_from_state(
                 self.xml_state, self.config_file
