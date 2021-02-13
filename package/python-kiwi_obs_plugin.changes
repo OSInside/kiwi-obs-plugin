@@ -1,6 +1,7 @@
+commit 8dfd621d61d5f0eec47d4912023d70e74b5d0963
 Author:     Marcus Schäfer <ms@suse.de>
-AuthorDate: Mon Feb 8 14:49:38 2021 +0100
-Commit:     GitHub <noreply@github.com>
-CommitDate: Mon Feb 8 14:49:38 2021 +0100
+AuthorDate: Mon Feb 8 15:53:09 2021 +0100
+Commit:     Marcus Schäfer <ms@suse.de>
+CommitDate: Mon Feb 8 15:53:09 2021 +0100
 
-    Initial commit
+    Added initial project setup
