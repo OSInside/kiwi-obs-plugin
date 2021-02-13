@@ -70,7 +70,7 @@ descriptions locally
 Summary:        KIWI - OBS Plugin
 Group:          Development/Languages/Python
 Requires:       python%{python3_pkgversion}-docopt
-Requires:       python%{python3_pkgversion}-kiwi >= 9.23.13
+Requires:       python%{python3_pkgversion}-kiwi >= 9.23.15
 Requires:       python%{python3_pkgversion}-requests
 Requires:       python%{python3_pkgversion}-setuptools
 %description -n python%{python3_pkgversion}-kiwi_obs_plugin
