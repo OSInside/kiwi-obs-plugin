@@ -90,7 +90,7 @@ class ImageObsTask(CliTask):
             self.load_xml_description(
                 obs_checkout.checkout_dir
             )
-            self.obs.add_obs_repositories(
+            repo_status = self.obs.add_obs_repositories(
                 self.xml_state, obs_checkout.profile,
                 self.command_args['--arch'] or 'x86_64',
                 self.command_args['--repo'] or 'images'
@@ -98,5 +98,6 @@ class ImageObsTask(CliTask):
             self.obs.write_kiwi_config_from_state(
                 self.xml_state, self.config_file
             )
-            log.info('OBS project checked out at:')
+            self.obs.print_repository_status(repo_status)
+            log.info('Successfully checked out OBS project at:')
             log.info(f'--> {obs_checkout.checkout_dir}')

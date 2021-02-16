@@ -1,5 +1,7 @@
 import io
 import os
+import logging
+from typing import Any
 from mock import (
     patch, Mock, MagicMock, call
 )
@@ -18,7 +20,9 @@ from kiwi_obs_plugin.exceptions import (
     KiwiOBSPluginCredentialsError
 )
 
-from kiwi_obs_plugin.obs import OBS
+from kiwi_obs_plugin.obs import (
+    OBS, obs_repo_status_type
+)
 
 
 class TestOBS:
@@ -206,6 +210,22 @@ class TestOBS:
             xml_state.xml_data.export.assert_called_once_with(
                 outfile=file_handle, level=0
             )
+
+    def test_print_repository_status(self):
+        log: Any = logging.getLogger('kiwi')
+        repo_status = {
+            'repo_a': obs_repo_status_type(
+                flag='ok', message='imported'
+            ),
+            'repo_b': obs_repo_status_type(
+                flag='unreachable', message='ignored:error'
+            )
+        }
+        with self._caplog.at_level(logging.WARNING):
+            self.obs.print_repository_status(repo_status)
+        log.setLogLevel(logging.DEBUG)
+        with self._caplog.at_level(logging.DEBUG):
+            self.obs.print_repository_status(repo_status)
 
     @patch('requests.get')
     @patch('kiwi_obs_plugin.obs.HTTPBasicAuth')

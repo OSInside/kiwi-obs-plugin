@@ -62,6 +62,9 @@ class TestImageObsTask:
         obs.add_obs_repositories.assert_called_once_with(
             self.task.xml_state, 'Kernel', 'x86_64', 'images'
         )
+        obs.print_repository_status.assert_called_once_with(
+            obs.add_obs_repositories.return_value
+        )
         obs.write_kiwi_config_from_state.assert_called_once_with(
             self.task.xml_state, '../data/appliance.kiwi'
         )
