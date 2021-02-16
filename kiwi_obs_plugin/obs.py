@@ -23,7 +23,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 from tempfile import NamedTemporaryFile
 from typing import (
-    List, NamedTuple, Optional
+    Any, Dict, List, NamedTuple, Optional
 )
 
 # project
@@ -61,7 +61,14 @@ obs_checkout_type = NamedTuple(
     ]
 )
 
-log = logging.getLogger('kiwi')
+obs_repo_status_type = NamedTuple(
+    'obs_repo_status_type', [
+        ('flag', str),
+        ('message', str)
+    ]
+)
+
+log: Any = logging.getLogger('kiwi')
 
 
 class OBS:
@@ -178,7 +185,7 @@ class OBS:
     def add_obs_repositories(
         self, xml_state: XMLState, profile: Optional[str] = None,
         arch: str = 'x86_64', repo: str = 'images'
-    ) -> None:
+    ) -> Dict[str, obs_repo_status_type]:
         """
         Add repositories from the obs project to the provided XMLState
 
@@ -187,11 +194,12 @@ class OBS:
         :param str repo:
             OBS image package build repository name, defaults to: 'images'
         """
+        repository_status_report: Dict[str, obs_repo_status_type] = {}
         if not OBS._delete_obsrepositories_placeholder_repo(xml_state):
             # The repo list does not contain the obsrepositories flag
             # Therefore it's not needed to look for repos in the OBS
             # project configuration
-            return None
+            return repository_status_report
 
         package_name = self.package if not profile \
             else f'{self.package}:{profile}'
@@ -221,7 +229,6 @@ class OBS:
                     repo_path.get('project'), repo_path.get('repository')
                 )
             if repo_url:
-                log.info(f'OBS Repo: {repo_url}')
                 try:
                     repo_uri = Uri(repo_url)
                     repo_url = repo_uri.translate(
@@ -230,15 +237,18 @@ class OBS:
                     request = requests.get(repo_url)
                     request.raise_for_status()
                 except Exception as issue:
-                    log.warn(
-                        f'--> Unreachable repo ignored: {issue}'
+                    repository_status_report[repo_url] = obs_repo_status_type(
+                        flag='unreachable', message=f'ignored:{issue}'
                     )
                     continue
 
                 repo_check = SolverRepositoryBase(repo_uri)
                 repo_type = repo_check.get_repo_type()
                 if not repo_type:
-                    log.warn('--> Unknown repo type ignored')
+                    repository_status_report[repo_url] = obs_repo_status_type(
+                        flag='repo_type_unknown',
+                        message='ignored:Unknown repository type'
+                    )
                     continue
 
                 if repo_type == 'rpm-md':
@@ -248,10 +258,37 @@ class OBS:
                     repo_prio_descending -= 1
                     repo_prio = repo_prio_descending
 
-                log.info('--> OK')
+                repository_status_report[repo_url] = obs_repo_status_type(
+                    flag='ok', message='imported'
+                )
                 xml_state.add_repository(
                     repo_url, repo_type, repo_alias, f'{repo_prio}'
                 )
+        return repository_status_report
+
+    @staticmethod
+    def print_repository_status(
+        repository_status_report: Dict[str, obs_repo_status_type]
+    ) -> None:
+        there_are_issues = False
+        if obs_repo_status_type:
+            log.info(
+                'Following repositories will be used to build the image:'
+            )
+            for repo, status in repository_status_report.items():
+                if status.flag == 'ok':
+                    log.info(f'--> {repo}')
+                else:
+                    there_are_issues = True
+        if there_are_issues:
+            log.warn('Repository issues exists')
+            if not log.getLogLevel() == logging.DEBUG and not log.get_logfile():
+                log.warn('--> Please re-run with --debug for details')
+            else:
+                for repo, status in repository_status_report.items():
+                    if not status.flag == 'ok':
+                        log.debug(f'Issue with repository: {repo}')
+                        log.debug(f'--> {status.message}')
 
     @staticmethod
     def write_kiwi_config_from_state(
