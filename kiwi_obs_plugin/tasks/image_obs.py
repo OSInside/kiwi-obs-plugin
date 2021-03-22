@@ -83,7 +83,8 @@ class ImageObsTask(CliTask):
             )
             obs_checkout = self.obs.fetch_obs_image(
                 self.command_args['--target-dir'],
-                self.command_args['--force']
+                self.command_args['--force'],
+                self.global_args['--profile']
             )
             if obs_checkout.profile:
                 self.global_args['--profile'] = [obs_checkout.profile]

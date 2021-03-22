@@ -57,7 +57,7 @@ class TestImageObsTask:
             'project/image', False, 'obs_user'
         )
         obs.fetch_obs_image.assert_called_once_with(
-            '../data/target_dir', False
+            '../data/target_dir', False, []
         )
         obs.add_obs_repositories.assert_called_once_with(
             self.task.xml_state, 'Kernel', 'x86_64', 'images'

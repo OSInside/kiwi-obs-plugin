@@ -118,7 +118,7 @@ class OBS:
         self.ssl_verify = ssl_verify or True
 
     def fetch_obs_image(
-        self, checkout_dir: str, force: bool = False
+        self, checkout_dir: str, force: bool = False, profile: list = None
     ) -> obs_checkout_type:
         """
         Fetch image description from the obs project
@@ -134,7 +134,7 @@ class OBS:
         :rtype: str
         """
         log.info('Checking out OBS project:')
-        primary_multibuild_profile = None
+        primary_multibuild_profile = profile[0] if profile else None
         if os.path.exists(checkout_dir) and not force:
             raise KiwiOBSPluginSourceError(
                 f'OBS source checkout dir: {checkout_dir!r} already exists'
@@ -173,7 +173,7 @@ class OBS:
         if '_service' in source_files:
             self._resolve_git_source_service(checkout_dir)
 
-        if '_multibuild' in source_files:
+        if '_multibuild' in source_files and not primary_multibuild_profile:
             primary_multibuild_profile = self._get_primary_multibuild_profile(
                 checkout_dir
             )
